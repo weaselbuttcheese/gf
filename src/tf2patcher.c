@@ -19,13 +19,13 @@
     {
         const char *window_name = "Team Fortress 2";
 
-        HWND window = FindWindow(NULL, window_name);
+        HWND window = FindWindowA(NULL, window_name);
         if (!window) {
             printf("Waiting for TF2 to start...\n");
 
             do {
                 Sleep(1000);
-                window = FindWindow(NULL, window_name);
+                window = FindWindowA(NULL, window_name);
             } while (!window);
         }
 
@@ -40,7 +40,7 @@
     {
         HMODULE modules[8192];
         DWORD num_modules;
-        char module_name[PATH_MAX], tempbuf[PATH_MAX], error_buf[8192];
+        char module_name[MAX_PATH], tempbuf[MAX_PATH], error_buf[8192];
         size_t num_retry = 0;
 
         do {
@@ -54,8 +54,8 @@
                 verbose_print("Found %u modules in TF2 process\n", num_modules);
 
                 for (size_t i = 0; i < num_modules; i++) {
-                    if (GetModuleFileNameEx(process, modules[i], module_name, sizeof(module_name)) &&
-                            !strcasecmp(extract_file_name(module_name, tempbuf, sizeof(tempbuf)), "client.dll")) {
+                    if (GetModuleFileNameExA(process, modules[i], module_name, sizeof(module_name)) &&
+                            !strcmp(extract_file_name(module_name, tempbuf, sizeof(tempbuf)), "client.dll")) {
                         verbose_print("Found TF2 client.dll (%zu/%u)\n", i + 1, num_modules);
                         return modules[i];
                     }
@@ -131,11 +131,6 @@
 
 #endif
 
-
-
-
-
-
 // perform new patching method thanks to leaked tf2 source code
 bool do_patch(void)
 {
@@ -143,45 +138,21 @@ bool do_patch(void)
 
     // CConfirmCustomizeTextureDialog::PerformFilter
     unsigned char pattern[] = {
-        0x6A, 0x04,
-        0x8B, 0x01,
-        0xFF, 0x90, 0xFF, 0xFF, 0x00, 0x00, // mask first two bytes in opcode param
-        0x8B, 0x8E, 0xFF, 0xFF, 0x00, 0x00, // same here
-        0xE8, 0xFF, 0xFF, 0xFF, 0xFF,       // mask call parm
-        0x83, 0xE8, 0x00
+		0x09, 0x86, 0xFF, 0xFF, 0x00, 0x00, 0x47
     };
 
     unsigned char *addr = find_mem_cl(pattern, sizeof(pattern));
     if (!addr) {
-        fprintf(stderr, "Failed to find CConfirmCustomizeTextureDialog::PerformFilter pattern in client library!\n");
+        fprintf(stderr, "Failed to find pattern in client library!\n");
     } else {
-        verbose_print("CConfirmCustomizeTextureDialog::PerformFilter pattern addr: 0x%" PRIXPTR "\n", (uintptr_t)addr);
+        verbose_print("Pattern addr: 0x%" PRIXPTR "\n", (uintptr_t)addr);
 
-        // rewrite call to mov in order to force identity filter
-        addr += 16;
-        set_mem(addr, (unsigned char []){0xB8, 0x01, 0x00, 0x00, 0x00}, 5);
-        verbose_print("Rewrote CALL to MOV\n");
+        set_mem(addr, (unsigned char []){0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x47, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90}, 13);
+        verbose_print("Patched!\n");
 
-        // disable blending
-        // check memory first
-        unsigned char pattern2[] = {
-            0x80, 0x3D, 0xFF, 0xFF, 0xFF, 0xFF, 0x00,
-            0x74
-        };
-
-        addr = find_mem(pattern2, sizeof(pattern2), addr, 200);
-        if (!addr) {
-            fprintf(stderr, "Failed to find CConfirmCustomizeTextureDialog::PerformFilter pattern #2 in client library!\n");
-        } else {
-            // rewrite jz to jmp
-            addr += 7;
-            set_mem(addr, (unsigned char []){0xEB}, 1);
-            verbose_print("Rewrote JZ to JMP\n");
-
-            // and thats pretty much it
-            printf("Done!\n");
-            return true;
-        }
+		// and thats pretty much it
+		printf("Done!\n");
+		return true;
     }
 
     return false;
@@ -194,21 +165,20 @@ int main(int argc, char *argv[])
 {
     printf(
         "  --------------------------------------------\n"
-        "  |       TF2 decal tool patcher 2.0.2       |\n"
-        "  | (c) default-username, Apr 2020, Mar 2016 |\n"
+        "  |      TF2 equip region patcher 1.0.0      |\n"
         "  --------------------------------------------\n"
         "\n");
 
     if (argv) {
         for (int i = 0; i < argc; i++) {
             if (argv[i]) {
-                if (!strcasecmp(argv[i], "-h") || !strcasecmp(argv[i], "--help")) {
+                if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
                     printf(
                         "Usage: tf2patcher -[hv]\n"
                         "       -h | --help    : show this help\n"
                         "       -v | --verbose : be more verbose\n");
                     return EXIT_SUCCESS;
-                } else if (!strcasecmp(argv[i], "-v") || !strcasecmp(argv[i], "--verbose")) {
+                } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
                     pinfo.verbose_mode = true;
                 }
             }
@@ -223,8 +193,8 @@ int main(int argc, char *argv[])
 
     free_resources();
 
-    printf("Press ENTER to exit...\n");
-    getchar();
+    printf("Press any key to exit...\n");
+    (void)(getchar());
 
     return res ? EXIT_SUCCESS : EXIT_FAILURE;
 }
