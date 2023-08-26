@@ -8,6 +8,7 @@ In short, now you can equip any cosmetic items you'd like, even if they're confl
 
 This is a modification of [tf2patcher](https://github.com/default-username-was-already-taken/tf2patcher).
 
+![https://i.imgur.com/hcHtRvU.jpeg](https://i.imgur.com/hcHtRvU.jpeg)
 
 ## Is it safe?
 
