@@ -1,4 +1,4 @@
-# TF2 patcher for full-colored decals
+# TF2 patcher to unlock equip regions
 
 ## Summary
 
