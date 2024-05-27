@@ -17,15 +17,20 @@
     // wait if the window is not there yet
     HWND get_tf2_window(void)
     {
-        const char *window_name = "Team Fortress 2";
+        const char *window_name_legacy = "Team Fortress 2";
+        const char *window_name = "Team Fortress 2 - Direct3D 9 - 64 Bit";
 
-        HWND window = FindWindow(NULL, window_name);
+        HWND window;
+        window = FindWindow(NULL, window_name);
+        if (!window) window = FindWindow(NULL, window_name_legacy);
+        
         if (!window) {
             printf("Waiting for TF2 to start...\n");
 
             do {
                 Sleep(1000);
                 window = FindWindow(NULL, window_name);
+                if (!window) window = FindWindow(NULL, window_name_legacy);
             } while (!window);
         }
 
